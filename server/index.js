@@ -1,4 +1,4 @@
-const pg = require ('pg');
+const pg = require('pg');
 const uuid = require('uuid');
 const client = new pg.Client(process.env.DATABASE_URL || 'postgress://localhost/acme_reservation_planner_db');
 
@@ -20,7 +20,8 @@ const createTables = async () => {
       id UUID PRIMARY KEY,
       reservation_date TIMESTAMP NOT NULL DEFAULT now(),
       customer_id UUID REFERENCES customers(id) NOT NULL,
-      restaurant_id UUID REFERENCES restaurants(id) NOT NULL
+      restaurant_id UUID REFERENCES restaurants(id) NOT NULL,
+      party_count INTEGER NOT NULL
     );
   `;
   await client.query(SQL);
@@ -36,9 +37,9 @@ const createRestaurant = async (name) => {
   const { rows } = await client.query(SQL, [uuid.v4(), name]);
   return rows[0];
 }
-const createReservation = async ({customer_id, restaurant_id, reservation_date}) => {
-  const SQL = /*SQL*/ `INSERT INTO reservations(id, customer_id, restaurant_id, reservation_date) VALUES ($1, $2, $3, $4) RETURNING *`
-  const { rows } = await client.query(SQL, [uuid.v4(), customer_id, restaurant_id, reservation_date]);
+const createReservation = async ({customer_id, restaurant_id, reservation_date, party_count}) => {
+  const SQL = /*SQL*/ `INSERT INTO reservations(id, customer_id, restaurant_id, reservation_date, party_count) VALUES ($1, $2, $3, $4, $5) RETURNING *`
+  const { rows } = await client.query(SQL, [uuid.v4(), customer_id, restaurant_id, reservation_date, party_count]);
   return rows;
 }
 
@@ -60,9 +61,9 @@ const fetchReservations = async () => {
   return rows;
 }
 
-const deleteReservation =  async ({id, user_id}) => { 
+const deleteReservation =  async ({id, customer_id}) => { 
   const SQL = /*SQL*/ `DELETE FROM reservations WHERE id=$1 AND customer_id=$2 RETURNING *`
-  await client.query(SQL, [id, user_id])
+  await client.query(SQL, [id, customer_id])
 }
 
 const seed = async () => {
@@ -88,26 +89,31 @@ const seed = async () => {
       customer_id: customers[0].id,
       restaurant_id: restaurants[2].id,
       reservation_date: '2024-05-01',
+      party_count: 5,
     }),
     createReservation({
       customer_id: customers[1].id,
       restaurant_id: restaurants[0].id,
       reservation_date: '2024-06-11',
+      party_count: 8,
     }),
     createReservation({
       customer_id: customers[2].id,
       restaurant_id: restaurants[1].id,
       reservation_date: '2025-12-13',
+      party_count: 2,
     }),
     createReservation({
       customer_id: customers[3].id,
       restaurant_id: restaurants[4].id,
       reservation_date: '2024-11-19',
+      party_count: 4,
     }),
     createReservation({
       customer_id: customers[4].id,
       restaurant_id: restaurants[3].id,
       reservation_date: '2024-10-18',
+      party_count: 15,
     }),
   ])
   console.log('Reservations created:', await fetchReservations());
